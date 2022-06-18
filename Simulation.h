@@ -9,11 +9,14 @@
 #include <random>
 
 
+#define PART_C_NUM_PARTICLES 1e6
+
+
 static double random_double(double &min, double &max)
 {
     std::random_device rd;
     std::default_random_engine eng(rd());
-    std::uniform_real_distribution<double> distr(10, 70);
+    std::uniform_real_distribution<double> distr(min, max);
     return distr(eng);
 }
 
@@ -34,9 +37,9 @@ public:
             {
                 //select random initial condition
                 double v_min = 0;  //todo change
-                double v_max = 1;  //todo change
-                double r_min = 0;  //todo change
-                double r_max = 1;  //todo change
+                double v_max = 0.5;  //todo change
+                double r_min = -1 * params->R;
+                double r_max = params->R;
                 initial_condition = {{random_double(r_min, r_max), 0},
                                      {0,                           random_double(v_min, v_max)}};
             }
@@ -61,6 +64,7 @@ public:
                 //check if particle crashed into the filter
                 if (particle.crashed)
                 {
+//                    std::cout << (--particle.history.end())->second;
                     crash_counter++;
                     break;
                 }
@@ -78,7 +82,7 @@ public:
 
     void analyze() const
     {
-        std::cout << "\npercentage of survivors: " << (1 - ((long double) crash_counter / 1e5)) << "\n";
+        std::cout << "\npercentage of survivors: " << (1 - ((long double) crash_counter / PART_C_NUM_PARTICLES)) << "\n";
     }
 
     void plot_final_velocity_histogram() const

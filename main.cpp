@@ -28,7 +28,7 @@ int main(int argc, char **argv)
     else if (s_equals(argv[1], "c"))
     {
         ProblemParameters params{1, 1, 1, 1, 1, 0.003, 1, MIDPOINT};  //todo change to RUNGE when it works
-        Simulation partC(1e5, &params, true);
+        Simulation partC(PART_C_NUM_PARTICLES, &params, true);
         partC.run();
         partC.analyze();
     }
