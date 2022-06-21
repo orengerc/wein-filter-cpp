@@ -1,7 +1,7 @@
-#ifndef NUMERICAL_CPP_PARTICLE_H
-#define NUMERICAL_CPP_PARTICLE_H
+#ifndef NUMERICAL_CPP_PARTICLE_HPP
+#define NUMERICAL_CPP_PARTICLE_HPP
 
-#include "ProblemParameters.h"
+#include "ProblemParameters.hpp"
 #include <unordered_map>
 #include <map>
 #include <iostream>
@@ -10,7 +10,7 @@
 #include <string>
 #include <sstream>
 
-typedef double Time;
+typedef long double Time;
 
 enum CTYPE
 {
@@ -21,20 +21,20 @@ enum CTYPE
 class DoublePair
 {
 public:
-    std::pair<double, double> pair;
+    std::pair<long double, long double> pair;
 
     DoublePair() : DoublePair(0, 0)
     {}
 
-    DoublePair(double a, double b) : pair(std::make_pair(a, b))
+    DoublePair(long double a, long double b) : pair(std::make_pair(a, b))
     {}
 
-    double &y()
+    long double &y()
     {
         return pair.first;
     }
 
-    double &z()
+    long double &z()
     {
         return pair.second;
     }
@@ -87,6 +87,7 @@ public:
     std::map<Time, State> history;
     ProblemParameters *params;
     bool crashed = false;
+    bool passed = false;
 
     Particle(State initial_condition, ProblemParameters *params) : params(params)
     {
@@ -101,22 +102,20 @@ public:
         return {ay, az};
     }
 
-    DoublePair K1(const CTYPE &type)
+    DoublePair K1(const CTYPE &type, State last_state)
     {
-        auto last_state = (--history.end())->second;
-        auto a = acceleration(last_state.v);
         switch (type)
         {
             case r:
                 return params->dt * last_state.v;
             case v:
+                auto a = acceleration(last_state.v);
                 return params->dt * a;
         }
     }
 
-    DoublePair K2(const CTYPE &type, DoublePair k1)
+    DoublePair K2(const CTYPE &type, DoublePair k1, State last_state)
     {
-        auto last_state = (--history.end())->second;
         switch (type)
         {
             case r:
@@ -129,29 +128,29 @@ public:
         }
     }
 
-    DoublePair K3(const CTYPE &type, DoublePair k2)
+    DoublePair K3(const CTYPE &type, DoublePair k2, State last_state)
     {
-        return K2(type, k2);
+        return K2(type, k2, last_state);
     }
 
-    DoublePair K4(const CTYPE &type, DoublePair k3)
+    DoublePair K4(const CTYPE &type, DoublePair k3, State last_state)
     {
-        auto last_state = (--history.end())->second;
         switch (type)
         {
             case r:
                 return params->dt * (last_state.v + k3);
             case v:
-                auto tmp = k3 + last_state.v;
-                auto acc = acceleration(tmp);
-                return acc * params->dt;
+                auto acc = acceleration(k3 + last_state.v);
+                return params->dt * acc;
         }
     }
 
     void advance_taylor(Time &t)
     {
-        //calc velocity
+        //take last state
         auto last_state = (--history.end())->second;
+
+        //calc velocity
         auto a = acceleration(last_state.v);
         auto v = last_state.v + a * params->dt;
 
@@ -164,16 +163,17 @@ public:
 
     void advance_midpoint(Time &t)
     {
+        //take last state
         auto last_state = (--history.end())->second;
 
         //calculate velocity
-        auto k1 = K1(v);
-        auto k2 = K2(v, k1);
+        auto k1 = K1(v, last_state);
+        auto k2 = K2(v, k1, last_state);
         auto v = last_state.v + k2;
 
         //calculate position
-        k1 = K1(r);
-        k2 = K2(r, k1);
+        k1 = K1(r, last_state);
+        k2 = K2(r, k1, last_state);
         auto r = last_state.r + k2;
 
         //insert new data
@@ -182,21 +182,22 @@ public:
 
     void advance_runge(Time &t)
     {
+        //take last state
         auto last_state = (--history.end())->second;
 
         //calculate velocity
-        auto k1 = K1(v);
-        auto k2 = K2(v, k1);
-        auto k3 = K3(v, k2);
-        auto k4 = K4(v, k3);
-        auto v = last_state.v + (((double) 1 / (double) 6) * ((k1 + (2 * k2) + (2 * k3) + (2 * k4))));
+        auto k1 = K1(v, last_state);
+        auto k2 = K2(v, k1, last_state);
+        auto k3 = K3(v, k2, last_state);
+        auto k4 = K4(v, k3, last_state);
+        auto v = last_state.v + (((long double) 1 / 6) * (k1 + (k2 * 2) + (k3 * 2) + (k4 * 2)));
 
         //calculate position
-        k1 = K1(r);
-        k2 = K2(r, k1);
-        k3 = K3(r, k2);
-        k4 = K4(r, k3);
-        auto r = last_state.r + (((double) 1 / (double) 6) * ((k1 + (2 * k2) + (2 * k3) + (2 * k4))));
+        k1 = K1(r, last_state);
+        k2 = K2(r, k1, last_state);
+        k3 = K3(r, k2, last_state);
+        k4 = K4(r, k3, last_state);
+        auto r = last_state.r + (((long double) 1 / 6) * (k1 + (k2 * 2) + (k3 * 2) + (k4 * 2)));
 
         //insert new data
         history[t] = {r, v};
@@ -216,17 +217,28 @@ public:
                 advance_runge(t);
                 break;
         }
+
+        //check if crashed
         auto new_pos = (--history.end())->second;
-        if ((std::abs(new_pos.r.y()) > params->R) && (new_pos.r.z() < params->L)){
+        if ((std::abs(new_pos.r.y()) >= params->R) && (new_pos.r.z() <= params->L))
+        {
             crashed = true;
+            return;
         }
+
+        //check if passed
+        if ((new_pos.r.z() > params->L))
+        {
+            passed = true;
+        }
+
     }
 
-    void export_history_to_excel()
+    void export_history_to_excel(const std::string &str = "")
     {
         std::vector<std::string> method_names{"TAYLOR", "MIDPOINT", "RUNGE_KUTTA"};
         std::ostringstream oss;
-        oss << method_names[params->method] << ".csv";
+        oss << method_names[params->method] << str << ".csv";
         std::string filename = oss.str();
 
         std::ofstream output_csv;
@@ -243,4 +255,4 @@ public:
 };
 
 
-#endif //NUMERICAL_CPP_PARTICLE_H
+#endif //NUMERICAL_CPP_PARTICLE_HPP

@@ -1,5 +1,5 @@
-#ifndef NUMERICAL_CPP_PROBLEMPARAMETERS_H
-#define NUMERICAL_CPP_PROBLEMPARAMETERS_H
+#ifndef NUMERICAL_CPP_PROBLEMPARAMETERS_HPP
+#define NUMERICAL_CPP_PROBLEMPARAMETERS_HPP
 
 #include <string>
 #include <iostream>
@@ -19,21 +19,21 @@ enum METHOD
 class ProblemParameters
 {
 public:
-    double E;
-    double B;
-    double m;
-    double q;
-    double w;
-    double T;
-    double dt;
-    double R;
-    double L;
+    long double E;
+    long double B;
+    long double m;
+    long double q;
+    long double w;
+    long double T;
+    long double dt;
+    long double R;
+    long double L;
     METHOD method;
 
     ProblemParameters() : ProblemParameters(1, 1, 1, 1, DEFAULT_DT, 1, 1, TAYLOR)
     {}
 
-    ProblemParameters(double E, double B, double m, double q, double dt, double R, double L,
+    ProblemParameters(long double E, long double B, long double m, long double q, long double dt, long double R, long double L,
                       METHOD method) : E(E), B(B), m(m), q(q), dt(dt), R(R), L(L),
                                        method(method), w(q * B / m), T(NUM_PERIODS * 2 * M_PI / w)
     {}
@@ -42,4 +42,4 @@ public:
 };
 
 
-#endif //NUMERICAL_CPP_PROBLEMPARAMETERS_H
+#endif //NUMERICAL_CPP_PROBLEMPARAMETERS_HPP
