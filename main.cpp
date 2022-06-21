@@ -58,7 +58,7 @@ int main(int argc, char **argv)
     else if (s_equals(argv[1], "c"))
     {
         ProblemParameters params{FIELDS_RATIO, 1, PROTON_MASS, PROTON_CHARGE, 1e-9, 0.003, 1,
-                                 MIDPOINT};  //todo change to RUNGE when it works
+                                 RUNGE_KUTTA};
         Simulation partC(PART_C_NUM_PARTICLES, &params, true);
         partC.run('c');
         partC.print_one_passed_one_didnt();
@@ -71,7 +71,7 @@ int main(int argc, char **argv)
             for (int i = 0; i < 53; ++i)
             {
                 ProblemParameters parameters{FIELDS_RATIO, 1, PROTON_MASS, PROTON_CHARGE, 1e-9, 0.003, 1,
-                                             MIDPOINT};  //todo change to RUNGE when it works
+                                             RUNGE_KUTTA};
                 Simulation sim(PART_C_NUM_PARTICLES, &parameters, true);
                 sim.run('c');
                 percentages.emplace_back(sim.print_passing_percentage());
